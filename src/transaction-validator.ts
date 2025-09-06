@@ -46,7 +46,7 @@ export class TransactionValidator {
       inputTotal += utxo.amount; //pasó las verificaciones, es valido y lo agrego
     }
 
-    //sumo las salidas
+    //verifico y sumo las salidas
     for (const salida of transaction.outputs) {
       if (salida.amount <= 0) {
         errors.push(createValidationError(VALIDATION_ERRORS.NEGATIVE_AMOUNT, `Cantidad de salida inválida: ${salida.amount}`));
