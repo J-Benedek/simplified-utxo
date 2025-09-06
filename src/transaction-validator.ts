@@ -18,10 +18,40 @@ export class TransactionValidator {
    */
   validateTransaction(transaction: Transaction): ValidationResult {
     const errors: ValidationError[] = [];
+    const utxosVistos = new Set<string>();
+    let inputTotal = 0;
+    let outputTotal = 0;
 
-    // STUDENT ASSIGNMENT: Implement the validation logic above
-    // Remove this line and implement the actual validation
-    throw new Error('Transaction validation not implemented - this is your assignment!');
+    for (const input of transaction.inputs){
+      const utxo = this.utxoPool.getUTXO(input.utxoId.txId, input.utxoId.outputIndex);
+      if (!utxo){
+        errors.push(createValidationError(VALIDATION_ERRORS.UTXO_NOT_FOUND, `UTXO no encontrado: ${input.utxoId.txId}:${input.utxoId.outputIndex}`));
+        continue;
+      }
+
+      const utxoKey = `${utxo.id.txId}:${utxo.id.outputIndex}`;
+      if (utxosVistos.has(utxoKey)){
+        errors.push(createValidationError(VALIDATION_ERRORS.DOUBLE_SPENDING, `UTXO ya gastado: ${utxoKey}`));
+      }
+      utxosVistos.add(utxoKey);
+
+      const transactionDataForSigning = this.createTransactionDataForSigning_(transaction);
+      if (!verify(transactionDataForSigning, input.signature, input.owner)){
+        errors.push(createValidationError(VALIDATION_ERRORS.INVALID_SIGNATURE, `Firma inválida para UTXO: ${utxoKey}`));
+      }
+      inputTotal += utxo.amount;
+    }
+
+    for (const output of transaction.outputs) {
+      if (output.amount <= 0) {
+        errors.push(createValidationError(VALIDATION_ERRORS.NEGATIVE_AMOUNT, `Cantidad de salida inválida: ${output.amount}`));
+      }
+      outputTotal += output.amount;
+    }
+
+    if (inputTotal !== outputTotal) {
+      errors.push(createValidationError(VALIDATION_ERRORS.AMOUNT_MISMATCH, `La suma de las entradas (${inputTotal}) no coincide con la suma de las salidas (${outputTotal})`));
+    }
 
     return {
       valid: errors.length === 0,
