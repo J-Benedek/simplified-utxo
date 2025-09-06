@@ -17,18 +17,21 @@ export class TransactionValidator {
    * @returns {ValidationResult} The validation result
    */
   validateTransaction(transaction: Transaction): ValidationResult {
+    
     const errors: ValidationError[] = [];
     const utxosVistos = new Set<string>();
     let inputTotal = 0;
     let outputTotal = 0;
 
     for (const input of transaction.inputs){
+
       //verifico si el utxo existe
       const utxo = this.utxoPool.getUTXO(input.utxoId.txId, input.utxoId.outputIndex);
       if (!utxo){
         errors.push(createValidationError(VALIDATION_ERRORS.UTXO_NOT_FOUND, `UTXO no encontrado: ${input.utxoId.txId}:${input.utxoId.outputIndex}`));
         continue; //salteo este caso, ya se que el utxo no cumple
       }
+
 
       //verifico si el utxo es duplicado
       const utxoKey = `${utxo.id.txId}:${utxo.id.outputIndex}`;
@@ -37,13 +40,16 @@ export class TransactionValidator {
       }
       utxosVistos.add(utxoKey);
 
+
       //verifico si la firma es valida
       const transactionDataForSigning = this.createTransactionDataForSigning_(transaction);
       if (!verify(transactionDataForSigning, input.signature, input.owner)){
         errors.push(createValidationError(VALIDATION_ERRORS.INVALID_SIGNATURE, `Firma inválida para UTXO: ${utxoKey}`));
       }
 
+
       inputTotal += utxo.amount; //pasó las verificaciones, es valido y lo agrego
+
     }
 
     //verifico y sumo las salidas
